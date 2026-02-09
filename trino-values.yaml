@@ -1,0 +1,56 @@
+# ==========================================
+# Trino 銀行級生產配置 (Iceberg + Nessie)
+# ==========================================
+
+# image:
+  # tag: "451" # 使用穩定的最新版本
+
+# 1. 核心資源設定 (Trino 很吃記憶體，針對 Mac 瘦身)
+server:
+  workers: 1
+  node:
+    environment: production
+  config:
+    query:
+      maxMemory: "1GB"
+      maxMemoryPerNode: "1GB"
+
+worker:
+  resources:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+coordinator:
+  resources:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# 2. 關鍵配置：定義 Catalog (這會產生 iceberg.properties)
+additionalCatalogs:
+  iceberg: |-
+    connector.name=iceberg
+    
+    # --- Nessie 目錄配置 ---
+    iceberg.catalog.type=nessie
+    iceberg.nessie-uri=http://nessie.infra.svc.cluster.local:19120/api/v1
+    iceberg.nessie-ref=main
+    
+    # --- MinIO (S3) 儲存配置 ---
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio.infra.svc.cluster.local:9000
+    s3.aws-access-key=admin
+    s3.aws-secret-key=password
+    s3.path-style-access=true
+    
+    # --- 效能與相容性優化 ---
+    iceberg.file-format=PARQUET
+    # 允許 Trino 進行基礎寫入 (例如建立 Table 或 Insert)
+    iceberg.register-table-procedure.enabled=true

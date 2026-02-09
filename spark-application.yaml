@@ -1,0 +1,31 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: gold-merge-job
+  namespace: default
+spec:
+  type: Python
+  mode: cluster
+  image: "bank-spark-job:v1"
+  imagePullPolicy: Never
+  mainApplicationFile: "local:///opt/spark/work-dir/gold_route_merge.py"
+  sparkVersion: "3.3.0"
+  driver:
+    cores: 1
+    memory: "1g"
+    serviceAccount: spark-sa
+  executor:
+    cores: 1
+    instances: 2
+    memory: "2g"
+  sparkConf:
+    "spark.sql.catalog.nessie": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.nessie.uri": "http://nessie.infra.svc.cluster.local:19120/api/v1"
+    "spark.sql.catalog.nessie.warehouse": "s3a://warehouse/"
+    "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog"
+    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkExtensions,org.projectnessie.nessie-integrations:nessie-spark-extensions-3.3_2.12:0.50.1"
+    "spark.hadoop.fs.s3a.endpoint": "http://minio.infra.svc.cluster.local:9000"
+    "spark.hadoop.fs.s3a.access.key": "admin"
+    "spark.hadoop.fs.s3a.secret.key": "password"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"

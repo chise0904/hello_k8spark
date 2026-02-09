@@ -1,0 +1,72 @@
+# ==========================================
+# Airflow 銀行級生產配置 (穩定版 2.10.4)
+# ==========================================
+
+# 1. 鏡像版本設定 (確保使用穩定的 2.10.x 系列)
+images:
+  airflow:
+    repository: apache/airflow
+    tag: 2.10.4
+
+# 2. 執行器設定 (使用 K8s 原生調度)
+executor: KubernetesExecutor
+
+
+# 3. 外部數據庫設定 (連接至 infra 命名空間的 Postgres)
+postgresql:
+  enabled: false # 關閉內建 DB
+
+data:
+  metadataConnection:
+    user: admin
+    pass: password
+    protocol: postgresql
+    host: postgres-postgresql.infra.svc.cluster.local
+    port: 5432
+    db: airflow
+
+# 4. Git-Sync 設定 (大腦同步功能)
+dags:
+  gitSync:
+    enabled: true
+    repo: git@github.com:chise0904/hello_airflow_dags_k8s.git # 換成你的 Git 網址
+    branch: main
+    rev: HEAD
+    depth: 1
+    wait: 60
+    sshKeySecret: airflow-ssh-secret # 確保你已建立此 Secret
+    subPath: "" # 如果 DAG 在根目錄則留空
+
+
+
+
+# 5. 環境變數 (用於 MinIO/S3 連線)
+env:
+  - name: "AWS_ACCESS_KEY_ID"
+    value: "admin"
+  - name: "AWS_SECRET_ACCESS_KEY"
+    value: "password"
+
+# 6. 資源限制 (防止 Mac 記憶體溢出)
+# 確保 webserver 開啟
+webserver:
+  enabled: true
+  resources:
+    requests:
+      memory: "512Mi"
+    limits:
+      memory: "1Gi"
+
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+
+# 7. 其他生產優化
+airflowHome: /opt/airflow
+defaultAirflowRepository: apache/airflow
